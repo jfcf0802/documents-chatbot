@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>The Smarty One</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #121212; /* Default to dark mode */
+            color: #f4f4f9;
+        }
+
+        body.light-mode {
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        #chat-container {
+            width: 60%;
+            margin: 0 auto;
+        }
+
+        #chat-log {
+            border: 1px solid #444; /* Dark mode border */
+            padding: 10px;
+            height: 400px;
+            overflow-y: scroll;
+            background-color: #1e1e1e;
+            color: #f4f4f9;
+        }
+
+        body.light-mode #chat-log {
+            background-color: white;
+            color: #333;
+            border-color: #ccc; /* Light mode border */
+        }
+
+        .chat-bubble {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .user-bubble {
+            justify-content: flex-end;
+        }
+
+        .bot-bubble {
+            justify-content: flex-start;
+        }
+
+        .message-box {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 70%;
+        }
+
+        .user-message {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        body.light-mode .user-message {
+            background-color: #d4f5d4;
+            color: #333;
+        }
+
+        .bot-message {
+            background-color: #1565c0;
+            color: white;
+        }
+
+        body.light-mode .bot-message {
+            background-color: #d9e9ff;
+            color: #333;
+        }
+
+        .chat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 10px;
+        }
+
+        #message-container {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center; /* Center the input box and button */
+            align-items: center;
+        }
+
+        #message {
+            width: 70%;
+            padding: 10px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #333;
+        }
+
+        body.light-mode button {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .loading-message img {
+            width: 30px;
+            height: 30px;
+        }
+
+        /* Center title and dark mode toggle button */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-label {
+            font-size: 1rem;
+            margin-right: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: 0.4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 2px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.4s;
+        }
+
+        input:checked + .slider {
+            background-color: #007bff;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+    <script>
+        // Toggle light and dark mode using the switch
+        function toggleDarkMode() {
+            document.body.classList.toggle("light-mode");
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById("message");
+            const message = messageInput.value.trim();
+
+            if (!message) {
+                return; // Prevent empty messages
+            }
+
+            const chatLog = document.getElementById("chat-log");
+
+            // Add user message
+            chatLog.innerHTML += `
+                <div class="chat-bubble user-bubble">
+                    <div class="message-box user-message">${message}</div>
+                    <img src="/static/user.png" class="chat-icon" alt="User">
+                </div>
+            `;
+
+            // Add bot loading message
+            const loadingMessageID = `loading-${Date.now()}`;
+            chatLog.innerHTML += `
+                <div class="chat-bubble bot-bubble" id="${loadingMessageID}">
+                    <img src="/static/chatbot.jpg" class="chat-icon" alt="Bot">
+                    <div class="message-box bot-message">
+                        <div class="loading-message">
+                            <img src="/static/loading.gif" alt="Loading...">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            chatLog.scrollTop = chatLog.scrollHeight; // Scroll to the bottom
+
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message }),
+            });
+
+            const data = await response.json();
+
+            // Replace the loading message with the bot's actual response
+            const loadingMessage = document.getElementById(loadingMessageID);
+            loadingMessage.innerHTML = `
+                <img src="/static/chatbot.jpg" class="chat-icon" alt="Bot">
+                <div class="message-box bot-message">${data.response}</div>
+            `;
+
+            chatLog.scrollTop = chatLog.scrollHeight; // Scroll to the bottom
+
+            messageInput.value = ""; // Clear input field
+        }
+
+        // Send message on pressing Enter
+        document.addEventListener("DOMContentLoaded", () => {
+            const messageInput = document.getElementById("message");
+
+            messageInput.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault(); // Prevent form submission
+                    sendMessage();
+                }
+            });
+        });
+
+        // Handle file upload and display summary as bot's first message
+        async function uploadFile() {
+            const fileInput = document.getElementById("file-upload");
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return; // Prevent upload if no file is selected
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const chatLog = document.getElementById("chat-log");
+
+            // Add bot loading message for file processing
+            chatLog.innerHTML += `
+                <div class="chat-bubble bot-bubble">
+                    <img src="/static/chatbot.jpg" class="chat-icon" alt="Bot">
+                    <div class="message-box bot-message">
+                        <div class="loading-message">
+                            <img src="/static/loading.gif" alt="Loading...">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            chatLog.scrollTop = chatLog.scrollHeight; // Scroll to the bottom
+
+            const response = await fetch("/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            // Show the summary as the bot's first message
+            const summaryMessage = data.summary || "No summary available.";
+            const loadingMessage = document.querySelector('.loading-message');
+            loadingMessage.closest('.chat-bubble').innerHTML = `
+                <img src="/static/chatbot.jpg" class="chat-icon" alt="Bot">
+                <div class="message-box bot-message">${summaryMessage}</div>
+            `;
+        }
+    </script>
+</head>
+<body>
+    <div id="chat-container">
+        <div class="header">
+            <h1>The Smarty One</h1>
+            <div class="toggle-container">
+                <span class="toggle-label">Dark Mode</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked onchange="toggleDarkMode()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        <div id="chat-log"></div>
+        <div id="message-container">
+            <input type="file" id="file-upload" onchange="uploadFile()" />
+        </div>
+        <div id="message-container">
+            <input type="text" id="message" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</body>
+</html>
