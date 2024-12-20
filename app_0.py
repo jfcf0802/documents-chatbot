@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from model import get_conversation_response
+from model_0 import get_conversation_response
 
 app = Flask(__name__)
 conversation_history = None
